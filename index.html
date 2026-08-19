@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>プラごみ品目別 AI判別＆出し方ガイド</title>
   <style>
-    /* 全体レイアウト */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       text-align: center;
@@ -15,78 +14,87 @@
       overflow-x: hidden;
     }
 
-    /* --- 🎬 オープニング演出（ごみ山が左右に退くアニメーション） --- */
+    /* --- 🎬 2つの山が左右に分かれるオープニング演出 --- */
     #intro-overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 9999;
+      z-index: 99999;
       pointer-events: none;
-      display: flex;
+      background-color: #ffffff;
+      overflow: hidden;
     }
 
-    .curtain-panel {
+    /* 左の山（奥の山） */
+    .mountain-left {
       position: absolute;
-      top: 0;
-      width: 50%;
-      height: 100%;
-      background: linear-gradient(180deg, #5c6b73 0%, #3d4a50 100%);
-      transition: transform 1.2s cubic-bezier(0.77, 0, 0.175, 1);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-    }
-
-    .panel-left {
+      bottom: 0;
       left: 0;
-      border-right: 2px dashed #9bc1bc;
+      width: 75vw;
+      max-width: 600px;
+      height: 75vh;
+      transition: transform 1.3s cubic-bezier(0.77, 0, 0.175, 1);
+      z-index: 2;
     }
 
-    .panel-right {
+    /* 右の山（手前の山） */
+    .mountain-right {
+      position: absolute;
+      bottom: 0;
       right: 0;
-      border-left: 2px dashed #9bc1bc;
+      width: 80vw;
+      max-width: 650px;
+      height: 75vh;
+      transition: transform 1.3s cubic-bezier(0.77, 0, 0.175, 1);
+      z-index: 3;
     }
 
-    /* 左右に退くアニメーション発火時のスタイル */
-    .open-left {
-      transform: translateX(-100%);
+    /* 左右に移動して退くアニメーション */
+    .slide-out-left {
+      transform: translateX(-130%) !important;
     }
-    .open-right {
-      transform: translateX(100%);
-    }
-
-    .trash-art {
-      font-size: 70px;
-      margin-bottom: 10px;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    .slide-out-right {
+      transform: translateX(130%) !important;
     }
 
-    .curtain-text {
-      color: #e0fbfc;
-      font-weight: bold;
+    .mountain-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 中央タイトル */
+    .center-title {
+      position: absolute;
+      top: 15%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px 24px;
+      border-radius: 30px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      color: #333;
       font-size: 16px;
-      letter-spacing: 2px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      font-weight: bold;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      transition: opacity 0.5s ease;
+      z-index: 10;
     }
 
-    /* --- メインアプリのカードデザイン --- */
+    /* --- メインカード --- */
     .card {
       background: white;
       max-width: 480px;
-      margin: 10px auto;
+      margin: 15px auto;
       padding: 20px 15px;
-      border-radius: 20px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+      border-radius: 18px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
       opacity: 0;
-      transform: scale(0.95);
-      transition: opacity 0.8s ease 0.5s, transform 0.8s ease 0.5s;
+      transform: scale(0.96);
+      transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
     }
-
-    /* 幕が開いた後にカードを表示 */
     .card.show {
       opacity: 1;
       transform: scale(1);
@@ -108,7 +116,6 @@
       border-radius: 10px;
       cursor: pointer;
       font-size: 14px;
-      transition: 0.2s;
     }
     .tab-btn.active {
       background-color: #008080;
@@ -140,7 +147,6 @@
       cursor: pointer;
       font-weight: bold;
       margin-bottom: 10px;
-      box-shadow: 0 4px 10px rgba(0,128,128,0.3);
     }
     input[type="file"] {
       display: none;
@@ -185,30 +191,112 @@
 </head>
 <body>
 
-<!-- 🎬 オープニング幕（左右に退くごみ山） -->
+<!-- 🎬 2つのゴミ山オープニング演出 -->
 <div id="intro-overlay">
-  <div class="curtain-panel panel-left" id="panel-left">
-    <div class="trash-art">🗑️📦</div>
-    <div class="curtain-text">ごみの山を...</div>
+  <div class="center-title" id="center-title">♻️ ごみの山から正しく分別！</div>
+
+  <!-- ① 左に移動するゴミ山 -->
+  <div class="mountain-left" id="mountain-left">
+    <svg class="mountain-svg" viewBox="0 0 500 500" preserveAspectRatio="none">
+      <!-- 左側の山体 -->
+      <path d="M-50,500 L-50,380 Q40,280 180,120 Q280,10 380,150 Q480,260 550,500 Z" fill="#6d5843"/>
+      <path d="M-50,500 L-50,400 Q60,300 200,160 Q290,60 390,190 Q470,300 520,500 Z" fill="#846d53"/>
+
+      <!-- 青いポリタンク（頂上付近） -->
+      <rect x="290" y="50" width="45" height="55" rx="8" fill="#3a86c8" transform="rotate(-20 290 50)"/>
+      <line x1="295" y1="75" x2="330" y2="75" stroke="#2563eb" stroke-width="4" transform="rotate(-20 290 50)"/>
+      
+      <!-- 緑のドラム缶 -->
+      <g transform="translate(140, 160) rotate(25)">
+        <rect x="0" y="0" width="80" height="110" rx="15" fill="#4d8b55"/>
+        <line x1="0" y1="35" x2="80" y2="35" stroke="#37683e" stroke-width="4"/>
+        <line x1="0" y1="75" x2="80" y2="75" stroke="#37683e" stroke-width="4"/>
+      </g>
+      
+      <!-- 洗濯機・家電 -->
+      <rect x="310" y="160" width="75" height="75" rx="8" fill="#e2e8f0" transform="rotate(-15 310 160)"/>
+      <circle cx="345" cy="195" r="20" fill="#94a3b8"/>
+      
+      <!-- タンス（家具） -->
+      <g transform="translate(340, 260) rotate(20)">
+        <rect x="0" y="0" width="90" height="90" fill="#b07d48" stroke="#84592b" stroke-width="4"/>
+        <line x1="0" y1="30" x2="90" y2="30" stroke="#84592b" stroke-width="3"/>
+        <line x1="0" y1="60" x2="90" y2="60" stroke="#84592b" stroke-width="3"/>
+        <circle cx="45" cy="15" r="4" fill="#523415"/>
+        <circle cx="45" cy="45" r="4" fill="#523415"/>
+        <circle cx="45" cy="75" r="4" fill="#523415"/>
+      </g>
+
+      <!-- タイヤ・赤ポリタンク -->
+      <ellipse cx="130" cy="300" rx="35" ry="25" fill="#1e293b"/>
+      <rect x="30" y="360" width="55" height="65" rx="10" fill="#c84b31" transform="rotate(15 30 360)"/>
+
+      <!-- 散らばる空き缶・ビン -->
+      <rect x="380" y="440" width="22" height="14" rx="4" fill="#2563eb" transform="rotate(45 380 440)"/>
+      <rect x="420" y="450" width="22" height="14" rx="4" fill="#dc2626" transform="rotate(-30 420 450)"/>
+      <rect x="200" y="460" width="24" height="14" rx="4" fill="#0d9488" transform="rotate(15 200 460)"/>
+      <rect x="90" y="460" width="70" height="15" rx="5" fill="#544026"/>
+    </svg>
   </div>
-  <div class="curtain-panel panel-right" id="panel-right">
-    <div class="trash-art">🧴🛍️</div>
-    <div class="curtain-text">正しく分別！</div>
+
+  <!-- ② 右に移動するゴミ山 -->
+  <div class="mountain-right" id="mountain-right">
+    <svg class="mountain-svg" viewBox="0 0 550 500" preserveAspectRatio="none">
+      <!-- 右側の山体（手前） -->
+      <path d="M-50,500 L-50,420 Q80,260 220,120 Q320,10 420,160 Q530,280 600,500 Z" fill="#7a624a"/>
+      <path d="M-50,500 L-50,440 Q100,280 240,150 Q340,40 430,190 Q520,320 580,500 Z" fill="#91775b"/>
+
+      <!-- 青いポリタンク（頂上付近） -->
+      <rect x="150" y="60" width="45" height="55" rx="8" fill="#3a86c8" transform="rotate(15 150 60)"/>
+      <line x1="155" y1="85" x2="190" y2="85" stroke="#2563eb" stroke-width="4" transform="rotate(15 150 60)"/>
+
+      <!-- 白い家電 -->
+      <rect x="230" y="160" width="75" height="75" rx="8" fill="#f1f5f9" transform="rotate(20 230 160)"/>
+      <circle cx="265" cy="195" r="20" fill="#cbd5e1"/>
+
+      <!-- タンス（家具） -->
+      <g transform="translate(140, 240) rotate(-20)">
+        <rect x="0" y="0" width="100" height="90" fill="#b07d48" stroke="#84592b" stroke-width="4"/>
+        <line x1="0" y1="30" x2="100" y2="30" stroke="#84592b" stroke-width="3"/>
+        <line x1="0" y1="60" x2="100" y2="60" stroke="#84592b" stroke-width="3"/>
+        <circle cx="50" cy="15" r="4" fill="#523415"/>
+        <circle cx="50" cy="45" r="4" fill="#523415"/>
+        <circle cx="50" cy="75" r="4" fill="#523415"/>
+      </g>
+
+      <!-- 緑のドラム缶 -->
+      <g transform="translate(370, 180) rotate(-25)">
+        <rect x="0" y="0" width="80" height="110" rx="15" fill="#529b5c"/>
+        <line x1="0" y1="35" x2="80" y2="35" stroke="#37683e" stroke-width="4"/>
+        <line x1="0" y1="75" x2="80" y2="75" stroke="#37683e" stroke-width="4"/>
+      </g>
+
+      <!-- タイヤ・赤ポリタンク -->
+      <ellipse cx="90" cy="240" rx="35" ry="25" fill="#1e293b" transform="rotate(35 90 240)"/>
+      <ellipse cx="480" cy="340" rx="30" ry="20" fill="#0f172a"/>
+      <rect x="490" y="400" width="55" height="65" rx="10" fill="#c84b31" transform="rotate(-15 490 400)"/>
+
+      <!-- 散らばる缶・ペットボトル・ビン -->
+      <rect x="70" y="440" width="22" height="14" rx="4" fill="#2563eb" transform="rotate(-20 70 440)"/>
+      <rect x="130" y="450" width="20" height="12" rx="3" fill="#16a34a"/>
+      <rect x="180" y="455" width="22" height="14" rx="4" fill="#dc2626"/>
+      <rect x="250" y="450" width="15" height="45" rx="4" fill="#65a30d" transform="rotate(90 250 450)"/>
+      <rect x="360" y="450" width="20" height="12" rx="3" fill="#16a34a"/>
+      <rect x="400" y="460" width="70" height="15" rx="5" fill="#544026"/>
+    </svg>
   </div>
 </div>
 
-<!-- 📱 メインアプリ画面 -->
+<!-- 📱 メインカード -->
 <div class="card" id="main-card">
   <h2>♻️ プラごみ AI判別ガイド</h2>
   <p style="font-size:13px; color:#666;">カメラまたは画像から分別区分を判定します。</p>
 
-  <!-- タブ切り替えボタン -->
   <div class="tab-container">
     <button class="tab-btn active" id="tab-camera" onclick="switchMode('camera')">📷 カメラで判定</button>
     <button class="tab-btn" id="tab-upload" onclick="switchMode('upload')">📁 画像を選んで判定</button>
   </div>
 
-  <!-- カメラ表示エリア -->
   <div id="camera-section">
     <div class="preview-area">
       <div id="loading" class="loading-text">📷 AIモデルとカメラを読み込み中...</div>
@@ -216,7 +304,6 @@
     </div>
   </div>
 
-  <!-- 画像アップロードエリア -->
   <div id="upload-section" style="display: none;">
     <label class="file-input-label">
       📁 画像を選択または撮影
@@ -228,7 +315,6 @@
     </div>
   </div>
 
-  <!-- 判定結果表示エリア -->
   <div id="label-container" class="result-box"></div>
 </div>
 
@@ -242,25 +328,30 @@
   let model, webcam, labelContainer, maxPredictions;
   let isCameraActive = false;
 
-  // ページ読み込み時にオープニングアニメーションを実行
-  window.addEventListener("DOMContentLoaded", () => {
-    // 0.6秒後に左右のごみ山の幕を開く
-    setTimeout(() => {
-      document.getElementById("panel-left").classList.add("open-left");
-      document.getElementById("panel-right").classList.add("open-right");
-      document.getElementById("main-card").classList.add("show");
+  // 画面ロード時に演出を実行（左の山は左へ、右の山は右へスライド）
+  window.onload = function() {
+    setTimeout(function() {
+      const mLeft = document.getElementById("mountain-left");
+      const mRight = document.getElementById("mountain-right");
+      const title = document.getElementById("center-title");
+      const mainCard = document.getElementById("main-card");
 
-      // アニメーション完了後に幕の要素を非表示にして操作の邪魔を防ぐ
-      setTimeout(() => {
-        document.getElementById("intro-overlay").style.display = "none";
-      }, 1300);
-    }, 600);
+      if (title) title.style.opacity = "0";
 
-    // AIモデルのロード開始
+      // 1つの山は左へ、もう1つの山は右へ退く
+      if (mLeft) mLeft.classList.add("slide-out-left");
+      if (mRight) mRight.classList.add("slide-out-right");
+      if (mainCard) mainCard.classList.add("show");
+
+      setTimeout(function() {
+        const overlay = document.getElementById("intro-overlay");
+        if (overlay) overlay.style.display = "none";
+      }, 1400);
+    }, 800);
+
     initModel();
-  });
+  };
 
-  // 1. AIモデル読み込み
   async function initModel() {
     try {
       const modelURL = URL + "model.json";
@@ -277,7 +368,6 @@
     }
   }
 
-  // 2. カメラ起動
   async function startCamera() {
     try {
       isCameraActive = true;
@@ -296,7 +386,6 @@
     }
   }
 
-  // 3. カメラループ
   async function loopCamera() {
     if (!isCameraActive) return;
     webcam.update();
@@ -304,7 +393,6 @@
     window.requestAnimationFrame(loopCamera);
   }
 
-  // 4. モード切り替え
   function switchMode(mode) {
     const tabCam = document.getElementById("tab-camera");
     const tabUp = document.getElementById("tab-upload");
@@ -330,7 +418,6 @@
     }
   }
 
-  // 5. 画像アップロード時の処理
   function handleImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -351,7 +438,6 @@
     reader.readAsDataURL(file);
   }
 
-  // 6. 出し方のアドバイス定義（大田区ルール準拠）
   function getAdviceForClass(className) {
     const name = className.toLowerCase();
 
@@ -391,7 +477,6 @@
     return null;
   }
 
-  // 7. AI判定
   async function predict(imageElement) {
     const prediction = await model.predict(imageElement);
     
