@@ -9,32 +9,71 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       text-align: center;
       background-color: #f4f7f6;
-      padding: 20px;
+      padding: 15px;
       margin: 0;
     }
     .card {
       background: white;
       max-width: 480px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 20px 15px;
       border-radius: 16px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     }
-    #webcam-container canvas {
+    .tab-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #008080;
+      background-color: white;
+      color: #008080;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .tab-btn.active {
+      background-color: #008080;
+      color: white;
+    }
+    .preview-area {
+      min-height: 250px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      border: 1px dashed #ccc;
+    }
+    #webcam-container canvas, #image-preview {
       border-radius: 12px;
       max-width: 100%;
-      height: auto;
+      max-height: 300px;
+      object-fit: contain;
     }
-    .btn {
-      background: #008080;
+    .file-input-label {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #008080;
       color: white;
-      border: none;
-      padding: 14px 28px;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 30px;
+      border-radius: 8px;
       cursor: pointer;
-      margin: 15px 0;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .loading-text {
+      font-size: 14px;
+      color: #666;
     }
     .result-box {
       margin-top: 15px;
@@ -73,98 +112,188 @@
 <body>
 
 <div class="card">
-  <h2>♻️ プラごみ品目別 AI判別カメラ</h2>
-  <p>カメラにごみをかざすと、品目の判定と出し方の注意点が表示されます。</p>
-  
-  <button type="button" class="btn" onclick="init()">📷 カメラを起動する</button>
-  
-  <div id="webcam-container"></div>
+  <h2>♻️ プラごみ AI判別ガイド</h2>
+  <p style="font-size:13px; color:#666;">カメラまたは画像から分別区分を判定します。</p>
+
+  <!-- タブ切り替えボタン -->
+  <div class="tab-container">
+    <button class="tab-btn active" id="tab-camera" onclick="switchMode('camera')">📷 カメラで判定</button>
+    <button class="tab-btn" id="tab-upload" onclick="switchMode('upload')">📁 画像を選んで判定</button>
+  </div>
+
+  <!-- カメラ表示領域 -->
+  <div id="camera-section">
+    <div class="preview-area">
+      <div id="loading" class="loading-text">📷 AIモデルとカメラを読み込み中...</div>
+      <div id="webcam-container"></div>
+    </div>
+  </div>
+
+  <!-- 画像アップロード表示領域 -->
+  <div id="upload-section" style="display: none;">
+    <label class="file-input-label">
+      📁 画像を選択または撮影
+      <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
+    </label>
+    <div class="preview-area">
+      <img id="image-preview" src="" alt="画像プレビュー" style="display: none;">
+      <span id="upload-placeholder" class="loading-text">画像をアップロードしてください</span>
+    </div>
+  </div>
+
   <div id="label-container" class="result-box"></div>
 </div>
 
-<!-- TensorFlow.js と Teachable Machine ライブラリ -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <script type="text/javascript">
-  // ★ ご自身のTeachable MachineモデルURLに書き換えてください（末尾のスラッシュ / を忘れずに）
+  // ★ ご自身のTeachable MachineモデルURLをここに貼り付けてください（末尾のスラッシュ / を忘れずに）
   const URL = "https://teachablemachine.withgoogle.com/models/fQsdyrL7J/";
 
   let model, webcam, labelContainer, maxPredictions;
+  let isCameraActive = false;
 
-  async function init() {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
+  window.addEventListener("DOMContentLoaded", initModel);
 
-    model = await tmImage.load(modelURL, metadataURL);
-    maxPredictions = model.getTotalClasses();
+  // 1. AIモデルの読み込み
+  async function initModel() {
+    try {
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
 
-    const flip = false;
-    webcam = new tmImage.Webcam(300, 300, flip);
-    await webcam.setup({ facingMode: "environment" });
-    await webcam.play();
-    window.requestAnimationFrame(loop);
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
+      labelContainer = document.getElementById("label-container");
 
-    document.getElementById("webcam-container").innerHTML = "";
-    document.getElementById("webcam-container").appendChild(webcam.canvas);
-    labelContainer = document.getElementById("label-container");
+      // 最初はカメラを起動
+      startCamera();
+    } catch (err) {
+      document.getElementById("loading").innerHTML = "⚠️ モデルの読み込みに失敗しました。<br>URL設定を確認してください。";
+      console.error(err);
+    }
   }
 
-  async function loop() {
+  // 2. カメラ起動処理
+  async function startCamera() {
+    try {
+      isCameraActive = true;
+      const flip = false; // 外カメラ優先
+      webcam = new tmImage.Webcam(300, 300, flip);
+      await webcam.setup({ facingMode: "environment" });
+      await webcam.play();
+      window.requestAnimationFrame(loopCamera);
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("webcam-container").innerHTML = "";
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+    } catch (err) {
+      document.getElementById("loading").innerHTML = "⚠️ カメラが起動できませんでした。<br>カメラの許可を確認してください。";
+      console.error(err);
+    }
+  }
+
+  // 3. カメラのリアルタイムループ
+  async function loopCamera() {
+    if (!isCameraActive) return;
     webcam.update();
-    await predict();
-    window.requestAnimationFrame(loop);
+    await predict(webcam.canvas);
+    window.requestAnimationFrame(loopCamera);
   }
 
-  // ★ 品目ごとの注意事項を判定・取得する関数
+  // 4. モード切り替え（カメラ ↔ 画像選択）
+  function switchMode(mode) {
+    const tabCam = document.getElementById("tab-camera");
+    const tabUp = document.getElementById("tab-upload");
+    const secCam = document.getElementById("camera-section");
+    const secUp = document.getElementById("upload-section");
+    labelContainer.innerHTML = "";
+
+    if (mode === "camera") {
+      tabCam.classList.add("active");
+      tabUp.classList.remove("active");
+      secCam.style.display = "block";
+      secUp.style.display = "none";
+      if (!isCameraActive) {
+        startCamera();
+      }
+    } else {
+      tabCam.classList.remove("active");
+      tabUp.classList.add("active");
+      secCam.style.display = "none";
+      secUp.style.display = "block";
+      isCameraActive = false;
+      if (webcam) webcam.stop();
+    }
+  }
+
+  // 5. 画像が選択されたときの処理
+  function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const imgPreview = document.getElementById("image-preview");
+    const placeholder = document.getElementById("upload-placeholder");
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      imgPreview.src = e.target.result;
+      imgPreview.style.display = "block";
+      placeholder.style.display = "none";
+
+      imgPreview.onload = async function() {
+        await predict(imgPreview);
+      };
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // 6. 出し方のアドバイス定義
   function getAdviceForClass(className) {
     const name = className.toLowerCase();
 
     if (name.includes("dvd")) {
-      return "本体・ケースとともに「プラスチックの日」に出してください。";
+      return "プラスチックのみ・30cm未満であれば「プラスチック」の日へ。<br>（汚れがない状態で出してください）";
     }
     if (name.includes("cd") || name.includes("co")) {
-      return "本体・ケースとともに「プラスチックの日」に出してください。";
+      return "プラスチックのみ・30cm未満であれば「プラスチック」の日へ。<br>（汚れがない状態で出してください）";
     }
     if (name.includes("ラップ") || name.includes("wrap")) {
-      return "水で軽くすすぎ、汚れのついていない状態で出してください。<br>⚠️ 汚れが取れない場合は「燃えるゴミ」へ。";
+      return "水で軽くすすぎ、汚れのない状態で「プラスチック」へ。<br>⚠️ 汚れが取れない場合は「可燃ごみ」へ。";
     }
     if (name.includes("マヨネーズ") || name.includes("mayonnaise") || name.includes("mayo")) {
-      return "中身を使い切り、水ですすいでください。（チューブをはさみで切ると洗いやすくなります）<br>⚠️ 汚れが取れない場合は「燃えるゴミ」へ。";
+      return "中身を使い切り、水ですすいで出してください。<br>⚠️ 汚れが取れない場合は「可燃ごみ」へ。";
     }
     if (name.includes("弁当") || name.includes("bento")) {
-      return "水で軽くすすいでから出してください。<br>⚠️ 油やタレなどの汚れが取れない場合は「燃えるゴミ」へ。";
+      return "【30cm未満・プラ単体・汚れなし】であれば「プラスチック」へ。<br>⚠️ 汚れが落ちない・ゴムパッキン等が外れない場合は「可燃ごみ」へ。";
     }
-    if (name.includes("キャップ") || name.includes("ラベル") || name.includes("ペットボトル") || name.includes("pet") || name.includes("cap")) {
-      return "ペットボトル本体は「資源の日」に出してください。（キャップとラベルはプラスチックの日へ）";
+    if (name.includes("キャップ") || name.includes("ラベル") || name.includes("pet") || name.includes("cap")) {
+      return "キャップ・ラベルは「プラスチック」へ。<br>ボトル本体は「資源（ペットボトル）」へ。";
     }
     if (name.includes("プチプチ") || name.includes("緩衝材") || name.includes("bubble")) {
-      return "機械への巻き付き防止のため、30cm程度に切断してから出してください。";
+      return "機械への巻き付き防止のため、30cm程度に切断して「プラスチック」へ。";
     }
     if (name.includes("フォーク") || name.includes("スプーン") || name.includes("fork")) {
-      return "プラスチックだけでできているものに限ります。（金属製などの複合素材は不可）";
+      return "プラスチック100%素材に限ります。（金属等の複合素材は不可）";
     }
     if (name.includes("ひも") || name.includes("紐") || name.includes("string") || name.includes("rope")) {
-      return "機械への巻き付き防止のため、30cm程度に切断してから出してください。";
+      return "機械への巻き付き防止のため、30cm程度に切断して「プラスチック」へ。";
     }
     if (name.includes("ハンガー") || name.includes("hanger")) {
-      return "プラスチックだけでできているものに限ります。（フック部分などが金属のものは不可）";
+      return "プラスチック単体で30cm未満のものに限ります。（フックが金属のものは不可）";
     }
-    if (name.includes("歯磨き") || name.includes("チューブ") || name.includes("toothpaste") || name.includes("tube")) {
-      return "中身を使い切り、水ですすいでください。（チューブをはさみで切ると洗いやすくなります）<br>⚠️ 汚れが取れない場合は「燃えるゴミ」へ。";
+    if (name.includes("歯磨き") || name.includes("チューブ") || name.includes("tube")) {
+      return "中身を使い切り、水ですすいで出してください。<br>⚠️ 汚れが取れない場合は「可燃ごみ」へ。";
     }
-
-    // 上記以外のプラスチック全般の共通案内
     if (name.includes("plastic") || name.includes("プラスチック") || name.includes("プラ")) {
-      return "水で軽くすすいで汚れを落として出してください。<br>⚠️ 汚れが取れない場合は「燃えるゴミ」にしてください。";
+      return "水ですすいで汚れを落として「プラスチック」へ。<br>⚠️ 汚れが取れない場合は「可燃ごみ」へ。";
     }
-
-    // プラスチック以外
     return null;
   }
 
-  async function predict() {
-    const prediction = await model.predict(webcam.canvas);
+  // 7. AI判定ロジック
+  async function predict(imageElement) {
+    const prediction = await model.predict(imageElement);
     
     let highestClass = "";
     let highestProb = 0;
@@ -179,7 +308,6 @@
     const percent = (highestProb * 100).toFixed(0);
     const advice = getAdviceForClass(highestClass);
 
-    // プラスチック系の品目と判定された場合（注意事項を表示）
     if (advice !== null) {
       labelContainer.innerHTML = `
         <div class="badge badge-plastic">✅ ${highestClass} (${percent}%)</div>
@@ -189,7 +317,6 @@
         </div>
       `;
     } else {
-      // プラスチック以外と判定された場合（注意書きは非表示）
       labelContainer.innerHTML = `
         <div class="badge badge-other">❌ ${highestClass} (${percent}%)</div>
       `;
