@@ -14,7 +14,7 @@
       overflow-x: hidden;
     }
 
-    /* --- 🎬 2つの山が左右に分かれるオープニング演出 --- */
+    /* --- 🎬 オープニング演出（画像＋文字が薄くなって消える） --- */
     #intro-overlay {
       position: fixed;
       top: 0;
@@ -23,64 +23,54 @@
       height: 100vh;
       z-index: 99999;
       pointer-events: none;
-      background-color: #ffffff;
-      overflow: hidden;
+      /* アップロードした画像を指定 */
+      background: url('recycle-bg.jpg') no-repeat center center;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* じわっと消えるフェードアウト設定（1.2秒かけて透明に） */
+      transition: opacity 1.2s ease-out, visibility 1.2s ease-out;
+      opacity: 1;
+      visibility: visible;
     }
 
-    /* 左の山（奥の山） */
-    .mountain-left {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 75vw;
-      max-width: 600px;
-      height: 75vh;
-      transition: transform 1.3s cubic-bezier(0.77, 0, 0.175, 1);
-      z-index: 2;
+    /* 画像に重ねる文字 */
+    .intro-banner {
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      padding: 20px 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transform: translateY(0);
+      transition: transform 1.0s ease-out;
     }
 
-    /* 右の山（手前の山） */
-    .mountain-right {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 80vw;
-      max-width: 650px;
-      height: 75vh;
-      transition: transform 1.3s cubic-bezier(0.77, 0, 0.175, 1);
-      z-index: 3;
+    .intro-title {
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin: 0 0 8px 0;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     }
 
-    /* 左右に移動して退くアニメーション */
-    .slide-out-left {
-      transform: translateX(-130%) !important;
-    }
-    .slide-out-right {
-      transform: translateX(130%) !important;
-    }
-
-    .mountain-svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* 中央タイトル */
-    .center-title {
-      position: absolute;
-      top: 15%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.95);
-      padding: 12px 24px;
-      border-radius: 30px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-      color: #333;
-      font-size: 16px;
+    .intro-subtitle {
+      color: #e0f2fe;
+      font-size: 14px;
       font-weight: bold;
+      margin: 0;
       letter-spacing: 1px;
-      white-space: nowrap;
-      transition: opacity 0.5s ease;
-      z-index: 10;
+    }
+
+    /* 薄くなって消えるクラス */
+    .fade-out {
+      opacity: 0 !important;
+      visibility: hidden !important;
+    }
+    .fade-out .intro-banner {
+      transform: scale(0.92);
     }
 
     /* --- メインカード --- */
@@ -191,103 +181,15 @@
 </head>
 <body>
 
-<!-- 🎬 2つのゴミ山オープニング演出 -->
+<!-- 🎬 イラストとメッセージのオープニング画面 -->
 <div id="intro-overlay">
-  <div class="center-title" id="center-title">♻️ ごみの山から正しく分別！</div>
-
-  <!-- ① 左に移動するゴミ山 -->
-  <div class="mountain-left" id="mountain-left">
-    <svg class="mountain-svg" viewBox="0 0 500 500" preserveAspectRatio="none">
-      <!-- 左側の山体 -->
-      <path d="M-50,500 L-50,380 Q40,280 180,120 Q280,10 380,150 Q480,260 550,500 Z" fill="#6d5843"/>
-      <path d="M-50,500 L-50,400 Q60,300 200,160 Q290,60 390,190 Q470,300 520,500 Z" fill="#846d53"/>
-
-      <!-- 青いポリタンク（頂上付近） -->
-      <rect x="290" y="50" width="45" height="55" rx="8" fill="#3a86c8" transform="rotate(-20 290 50)"/>
-      <line x1="295" y1="75" x2="330" y2="75" stroke="#2563eb" stroke-width="4" transform="rotate(-20 290 50)"/>
-      
-      <!-- 緑のドラム缶 -->
-      <g transform="translate(140, 160) rotate(25)">
-        <rect x="0" y="0" width="80" height="110" rx="15" fill="#4d8b55"/>
-        <line x1="0" y1="35" x2="80" y2="35" stroke="#37683e" stroke-width="4"/>
-        <line x1="0" y1="75" x2="80" y2="75" stroke="#37683e" stroke-width="4"/>
-      </g>
-      
-      <!-- 洗濯機・家電 -->
-      <rect x="310" y="160" width="75" height="75" rx="8" fill="#e2e8f0" transform="rotate(-15 310 160)"/>
-      <circle cx="345" cy="195" r="20" fill="#94a3b8"/>
-      
-      <!-- タンス（家具） -->
-      <g transform="translate(340, 260) rotate(20)">
-        <rect x="0" y="0" width="90" height="90" fill="#b07d48" stroke="#84592b" stroke-width="4"/>
-        <line x1="0" y1="30" x2="90" y2="30" stroke="#84592b" stroke-width="3"/>
-        <line x1="0" y1="60" x2="90" y2="60" stroke="#84592b" stroke-width="3"/>
-        <circle cx="45" cy="15" r="4" fill="#523415"/>
-        <circle cx="45" cy="45" r="4" fill="#523415"/>
-        <circle cx="45" cy="75" r="4" fill="#523415"/>
-      </g>
-
-      <!-- タイヤ・赤ポリタンク -->
-      <ellipse cx="130" cy="300" rx="35" ry="25" fill="#1e293b"/>
-      <rect x="30" y="360" width="55" height="65" rx="10" fill="#c84b31" transform="rotate(15 30 360)"/>
-
-      <!-- 散らばる空き缶・ビン -->
-      <rect x="380" y="440" width="22" height="14" rx="4" fill="#2563eb" transform="rotate(45 380 440)"/>
-      <rect x="420" y="450" width="22" height="14" rx="4" fill="#dc2626" transform="rotate(-30 420 450)"/>
-      <rect x="200" y="460" width="24" height="14" rx="4" fill="#0d9488" transform="rotate(15 200 460)"/>
-      <rect x="90" y="460" width="70" height="15" rx="5" fill="#544026"/>
-    </svg>
-  </div>
-
-  <!-- ② 右に移動するゴミ山 -->
-  <div class="mountain-right" id="mountain-right">
-    <svg class="mountain-svg" viewBox="0 0 550 500" preserveAspectRatio="none">
-      <!-- 右側の山体（手前） -->
-      <path d="M-50,500 L-50,420 Q80,260 220,120 Q320,10 420,160 Q530,280 600,500 Z" fill="#7a624a"/>
-      <path d="M-50,500 L-50,440 Q100,280 240,150 Q340,40 430,190 Q520,320 580,500 Z" fill="#91775b"/>
-
-      <!-- 青いポリタンク（頂上付近） -->
-      <rect x="150" y="60" width="45" height="55" rx="8" fill="#3a86c8" transform="rotate(15 150 60)"/>
-      <line x1="155" y1="85" x2="190" y2="85" stroke="#2563eb" stroke-width="4" transform="rotate(15 150 60)"/>
-
-      <!-- 白い家電 -->
-      <rect x="230" y="160" width="75" height="75" rx="8" fill="#f1f5f9" transform="rotate(20 230 160)"/>
-      <circle cx="265" cy="195" r="20" fill="#cbd5e1"/>
-
-      <!-- タンス（家具） -->
-      <g transform="translate(140, 240) rotate(-20)">
-        <rect x="0" y="0" width="100" height="90" fill="#b07d48" stroke="#84592b" stroke-width="4"/>
-        <line x1="0" y1="30" x2="100" y2="30" stroke="#84592b" stroke-width="3"/>
-        <line x1="0" y1="60" x2="100" y2="60" stroke="#84592b" stroke-width="3"/>
-        <circle cx="50" cy="15" r="4" fill="#523415"/>
-        <circle cx="50" cy="45" r="4" fill="#523415"/>
-        <circle cx="50" cy="75" r="4" fill="#523415"/>
-      </g>
-
-      <!-- 緑のドラム缶 -->
-      <g transform="translate(370, 180) rotate(-25)">
-        <rect x="0" y="0" width="80" height="110" rx="15" fill="#529b5c"/>
-        <line x1="0" y1="35" x2="80" y2="35" stroke="#37683e" stroke-width="4"/>
-        <line x1="0" y1="75" x2="80" y2="75" stroke="#37683e" stroke-width="4"/>
-      </g>
-
-      <!-- タイヤ・赤ポリタンク -->
-      <ellipse cx="90" cy="240" rx="35" ry="25" fill="#1e293b" transform="rotate(35 90 240)"/>
-      <ellipse cx="480" cy="340" rx="30" ry="20" fill="#0f172a"/>
-      <rect x="490" y="400" width="55" height="65" rx="10" fill="#c84b31" transform="rotate(-15 490 400)"/>
-
-      <!-- 散らばる缶・ペットボトル・ビン -->
-      <rect x="70" y="440" width="22" height="14" rx="4" fill="#2563eb" transform="rotate(-20 70 440)"/>
-      <rect x="130" y="450" width="20" height="12" rx="3" fill="#16a34a"/>
-      <rect x="180" y="455" width="22" height="14" rx="4" fill="#dc2626"/>
-      <rect x="250" y="450" width="15" height="45" rx="4" fill="#65a30d" transform="rotate(90 250 450)"/>
-      <rect x="360" y="450" width="20" height="12" rx="3" fill="#16a34a"/>
-      <rect x="400" y="460" width="70" height="15" rx="5" fill="#544026"/>
-    </svg>
+  <div class="intro-banner">
+    <h1 class="intro-title">♻️ プラスチックゴミを分別しよう</h1>
+    <p class="intro-subtitle">AI判別ガイドを起動しています...</p>
   </div>
 </div>
 
-<!-- 📱 メインカード -->
+<!-- 📱 メイン画面 -->
 <div class="card" id="main-card">
   <h2>♻️ プラごみ AI判別ガイド</h2>
   <p style="font-size:13px; color:#666;">カメラまたは画像から分別区分を判定します。</p>
@@ -328,26 +230,20 @@
   let model, webcam, labelContainer, maxPredictions;
   let isCameraActive = false;
 
-  // 画面ロード時に演出を実行（左の山は左へ、右の山は右へスライド）
+  // 画面が表示されたら演出を開始
   window.onload = function() {
+    // 1.5秒間イラストと文字を見せてから、1.2秒かけてゆっくりフェードアウト
     setTimeout(function() {
-      const mLeft = document.getElementById("mountain-left");
-      const mRight = document.getElementById("mountain-right");
-      const title = document.getElementById("center-title");
+      const overlay = document.getElementById("intro-overlay");
       const mainCard = document.getElementById("main-card");
 
-      if (title) title.style.opacity = "0";
-
-      // 1つの山は左へ、もう1つの山は右へ退く
-      if (mLeft) mLeft.classList.add("slide-out-left");
-      if (mRight) mRight.classList.add("slide-out-right");
+      if (overlay) overlay.classList.add("fade-out");
       if (mainCard) mainCard.classList.add("show");
 
       setTimeout(function() {
-        const overlay = document.getElementById("intro-overlay");
         if (overlay) overlay.style.display = "none";
-      }, 1400);
-    }, 800);
+      }, 1300);
+    }, 1500);
 
     initModel();
   };
