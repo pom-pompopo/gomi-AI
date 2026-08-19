@@ -5,21 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>プラごみ品目別 AI判別＆出し方ガイド</title>
   <style>
+    /* 全体レイアウト */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       text-align: center;
-      background-color: #f4f7f6;
+      background-color: #f0f4f3;
       padding: 15px;
       margin: 0;
+      overflow-x: hidden;
     }
+
+    /* --- 🎬 オープニング演出（ごみ山が左右に退くアニメーション） --- */
+    #intro-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
+      pointer-events: none;
+      display: flex;
+    }
+
+    .curtain-panel {
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(180deg, #5c6b73 0%, #3d4a50 100%);
+      transition: transform 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .panel-left {
+      left: 0;
+      border-right: 2px dashed #9bc1bc;
+    }
+
+    .panel-right {
+      right: 0;
+      border-left: 2px dashed #9bc1bc;
+    }
+
+    /* 左右に退くアニメーション発火時のスタイル */
+    .open-left {
+      transform: translateX(-100%);
+    }
+    .open-right {
+      transform: translateX(100%);
+    }
+
+    .trash-art {
+      font-size: 70px;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+
+    .curtain-text {
+      color: #e0fbfc;
+      font-weight: bold;
+      font-size: 16px;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* --- メインアプリのカードデザイン --- */
     .card {
       background: white;
       max-width: 480px;
-      margin: 0 auto;
+      margin: 10px auto;
       padding: 20px 15px;
-      border-radius: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.8s ease 0.5s, transform 0.8s ease 0.5s;
     }
+
+    /* 幕が開いた後にカードを表示 */
+    .card.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
     .tab-container {
       display: flex;
       justify-content: center;
@@ -33,24 +105,25 @@
       background-color: white;
       color: #008080;
       font-weight: bold;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
       font-size: 14px;
+      transition: 0.2s;
     }
     .tab-btn.active {
       background-color: #008080;
       color: white;
     }
     .preview-area {
-      min-height: 250px;
+      min-height: 260px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f9f9f9;
-      border-radius: 12px;
+      background-color: #f9fbfb;
+      border-radius: 14px;
       overflow: hidden;
       margin-bottom: 15px;
-      border: 1px dashed #ccc;
+      border: 2px dashed #b2dfdb;
     }
     #webcam-container canvas, #image-preview {
       border-radius: 12px;
@@ -60,13 +133,14 @@
     }
     .file-input-label {
       display: inline-block;
-      padding: 10px 20px;
+      padding: 10px 22px;
       background-color: #008080;
       color: white;
-      border-radius: 8px;
+      border-radius: 25px;
       cursor: pointer;
       font-weight: bold;
       margin-bottom: 10px;
+      box-shadow: 0 4px 10px rgba(0,128,128,0.3);
     }
     input[type="file"] {
       display: none;
@@ -98,7 +172,7 @@
       background-color: #fff9e6;
       border-left: 4px solid #f59e0b;
       padding: 12px 14px;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 14px;
       line-height: 1.6;
       color: #4a3b00;
@@ -111,7 +185,20 @@
 </head>
 <body>
 
-<div class="card">
+<!-- 🎬 オープニング幕（左右に退くごみ山） -->
+<div id="intro-overlay">
+  <div class="curtain-panel panel-left" id="panel-left">
+    <div class="trash-art">🗑️📦</div>
+    <div class="curtain-text">ごみの山を...</div>
+  </div>
+  <div class="curtain-panel panel-right" id="panel-right">
+    <div class="trash-art">🧴🛍️</div>
+    <div class="curtain-text">正しく分別！</div>
+  </div>
+</div>
+
+<!-- 📱 メインアプリ画面 -->
+<div class="card" id="main-card">
   <h2>♻️ プラごみ AI判別ガイド</h2>
   <p style="font-size:13px; color:#666;">カメラまたは画像から分別区分を判定します。</p>
 
@@ -121,7 +208,7 @@
     <button class="tab-btn" id="tab-upload" onclick="switchMode('upload')">📁 画像を選んで判定</button>
   </div>
 
-  <!-- カメラ表示領域 -->
+  <!-- カメラ表示エリア -->
   <div id="camera-section">
     <div class="preview-area">
       <div id="loading" class="loading-text">📷 AIモデルとカメラを読み込み中...</div>
@@ -129,7 +216,7 @@
     </div>
   </div>
 
-  <!-- 画像アップロード表示領域 -->
+  <!-- 画像アップロードエリア -->
   <div id="upload-section" style="display: none;">
     <label class="file-input-label">
       📁 画像を選択または撮影
@@ -137,10 +224,11 @@
     </label>
     <div class="preview-area">
       <img id="image-preview" src="" alt="画像プレビュー" style="display: none;">
-      <span id="upload-placeholder" class="loading-text">画像をアップロードしてください</span>
+      <span id="upload-placeholder" class="loading-text">画像ファイルを選択してください</span>
     </div>
   </div>
 
+  <!-- 判定結果表示エリア -->
   <div id="label-container" class="result-box"></div>
 </div>
 
@@ -154,9 +242,25 @@
   let model, webcam, labelContainer, maxPredictions;
   let isCameraActive = false;
 
-  window.addEventListener("DOMContentLoaded", initModel);
+  // ページ読み込み時にオープニングアニメーションを実行
+  window.addEventListener("DOMContentLoaded", () => {
+    // 0.6秒後に左右のごみ山の幕を開く
+    setTimeout(() => {
+      document.getElementById("panel-left").classList.add("open-left");
+      document.getElementById("panel-right").classList.add("open-right");
+      document.getElementById("main-card").classList.add("show");
 
-  // 1. AIモデルの読み込み
+      // アニメーション完了後に幕の要素を非表示にして操作の邪魔を防ぐ
+      setTimeout(() => {
+        document.getElementById("intro-overlay").style.display = "none";
+      }, 1300);
+    }, 600);
+
+    // AIモデルのロード開始
+    initModel();
+  });
+
+  // 1. AIモデル読み込み
   async function initModel() {
     try {
       const modelURL = URL + "model.json";
@@ -166,7 +270,6 @@
       maxPredictions = model.getTotalClasses();
       labelContainer = document.getElementById("label-container");
 
-      // 最初はカメラを起動
       startCamera();
     } catch (err) {
       document.getElementById("loading").innerHTML = "⚠️ モデルの読み込みに失敗しました。<br>URL設定を確認してください。";
@@ -174,11 +277,11 @@
     }
   }
 
-  // 2. カメラ起動処理
+  // 2. カメラ起動
   async function startCamera() {
     try {
       isCameraActive = true;
-      const flip = false; // 外カメラ優先
+      const flip = false;
       webcam = new tmImage.Webcam(300, 300, flip);
       await webcam.setup({ facingMode: "environment" });
       await webcam.play();
@@ -193,7 +296,7 @@
     }
   }
 
-  // 3. カメラのリアルタイムループ
+  // 3. カメラループ
   async function loopCamera() {
     if (!isCameraActive) return;
     webcam.update();
@@ -201,7 +304,7 @@
     window.requestAnimationFrame(loopCamera);
   }
 
-  // 4. モード切り替え（カメラ ↔ 画像選択）
+  // 4. モード切り替え
   function switchMode(mode) {
     const tabCam = document.getElementById("tab-camera");
     const tabUp = document.getElementById("tab-upload");
@@ -227,7 +330,7 @@
     }
   }
 
-  // 5. 画像が選択されたときの処理
+  // 5. 画像アップロード時の処理
   function handleImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -248,14 +351,11 @@
     reader.readAsDataURL(file);
   }
 
-  // 6. 出し方のアドバイス定義
+  // 6. 出し方のアドバイス定義（大田区ルール準拠）
   function getAdviceForClass(className) {
     const name = className.toLowerCase();
 
-    if (name.includes("dvd")) {
-      return "プラスチックのみ・30cm未満であれば「プラスチック」の日へ。<br>（汚れがない状態で出してください）";
-    }
-    if (name.includes("cd") || name.includes("co")) {
+    if (name.includes("dvd") || name.includes("cd") || name.includes("co")) {
       return "プラスチックのみ・30cm未満であれば「プラスチック」の日へ。<br>（汚れがない状態で出してください）";
     }
     if (name.includes("ラップ") || name.includes("wrap")) {
@@ -291,7 +391,7 @@
     return null;
   }
 
-  // 7. AI判定ロジック
+  // 7. AI判定
   async function predict(imageElement) {
     const prediction = await model.predict(imageElement);
     
