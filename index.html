@@ -5,16 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>プラごみ品目別 AI判別＆出し方ガイド</title>
   <style>
+    /* 全体背景に指定した地球・リサイクル画像を設定 */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       text-align: center;
-      background-color: #f0f4f3;
-      padding: 15px;
       margin: 0;
+      padding: 15px;
+      min-height: 100vh;
+      box-sizing: border-box;
+      /* ★ メイン画面の背景画像 */
+      background: url('main-bg.jpg') no-repeat center center fixed;
+      background-size: cover;
       overflow-x: hidden;
     }
 
-    /* --- 🎬 オープニング演出（画像＋文字が薄くなって消える） --- */
+    /* --- 🎬 オープニング演出（イラスト画像＋文字が薄くなって消える） --- */
     #intro-overlay {
       position: fixed;
       top: 0;
@@ -23,19 +28,17 @@
       height: 100vh;
       z-index: 99999;
       pointer-events: none;
-      /* アップロードした画像を指定 */
+      /* 最初のオープニング用イラスト */
       background: url('recycle-bg.jpg') no-repeat center center;
       background-size: cover;
       display: flex;
       justify-content: center;
       align-items: center;
-      /* じわっと消えるフェードアウト設定（1.2秒かけて透明に） */
       transition: opacity 1.2s ease-out, visibility 1.2s ease-out;
       opacity: 1;
       visibility: visible;
     }
 
-    /* 画像に重ねる文字 */
     .intro-banner {
       background: rgba(0, 0, 0, 0.55);
       backdrop-filter: blur(4px);
@@ -43,13 +46,11 @@
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      transform: translateY(0);
-      transition: transform 1.0s ease-out;
     }
 
     .intro-title {
       color: #ffffff;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: 2px;
       margin: 0 0 8px 0;
@@ -61,26 +62,23 @@
       font-size: 14px;
       font-weight: bold;
       margin: 0;
-      letter-spacing: 1px;
     }
 
-    /* 薄くなって消えるクラス */
     .fade-out {
       opacity: 0 !important;
       visibility: hidden !important;
     }
-    .fade-out .intro-banner {
-      transform: scale(0.92);
-    }
 
-    /* --- メインカード --- */
+    /* --- メインカード（背景が透けて見えるすりガラスデザイン） --- */
     .card {
-      background: white;
+      background: rgba(255, 255, 255, 0.90); /* 半透明にして背景を活かす */
+      backdrop-filter: blur(8px);
       max-width: 480px;
       margin: 15px auto;
       padding: 20px 15px;
-      border-radius: 18px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.6);
       opacity: 0;
       transform: scale(0.96);
       transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
@@ -116,11 +114,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f9fbfb;
+      background-color: rgba(249, 251, 251, 0.8);
       border-radius: 14px;
       overflow: hidden;
       margin-bottom: 15px;
-      border: 2px dashed #b2dfdb;
+      border: 2px dashed #008080;
     }
     #webcam-container canvas, #image-preview {
       border-radius: 12px;
@@ -181,7 +179,7 @@
 </head>
 <body>
 
-<!-- 🎬 イラストとメッセージのオープニング画面 -->
+<!-- 🎬 オープニング演出 -->
 <div id="intro-overlay">
   <div class="intro-banner">
     <h1 class="intro-title">♻️ プラスチックゴミを分別しよう</h1>
@@ -189,10 +187,10 @@
   </div>
 </div>
 
-<!-- 📱 メイン画面 -->
+<!-- 📱 メイン画面（背景画像の上に浮かび上がる） -->
 <div class="card" id="main-card">
   <h2>♻️ プラごみ AI判別ガイド</h2>
-  <p style="font-size:13px; color:#666;">カメラまたは画像から分別区分を判定します。</p>
+  <p style="font-size:13px; color:#555;">カメラまたは画像から分別区分を判定します。</p>
 
   <div class="tab-container">
     <button class="tab-btn active" id="tab-camera" onclick="switchMode('camera')">📷 カメラで判定</button>
@@ -230,9 +228,8 @@
   let model, webcam, labelContainer, maxPredictions;
   let isCameraActive = false;
 
-  // 画面が表示されたら演出を開始
   window.onload = function() {
-    // 1.5秒間イラストと文字を見せてから、1.2秒かけてゆっくりフェードアウト
+    // 1.5秒後にオープニング幕をフェードアウト
     setTimeout(function() {
       const overlay = document.getElementById("intro-overlay");
       const mainCard = document.getElementById("main-card");
